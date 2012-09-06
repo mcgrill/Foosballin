@@ -9,7 +9,7 @@
 # add their .o targets to the OBJECTS line below
 # (e.g. "OBJECTS = main.o myfile.o")
 # --------------------------------------------------------
-OBJECTS    = foosballin.o 
+OBJECTS    = foosballin.o ../m2_libraries/m_usb.o
 #../m2_libraries/m_usb.o ../m2_libraries/m_bus.o
 
 # --------------------------------------------------------

@@ -8,16 +8,19 @@ With 4 LEDs per side, you can count up to 2^4 = 16 points.
 
 // INCLUDES
 #include "m_general.h"
+#include "m_usb.h"
 
 // DEFINES
+#define DEBUG 1
 #define NUM_LEDS 4
-#define LIGHT_SHOW_DELAY1_MS 100
-#define LIGHT_SHOW_DELAY2_MS 1000
-#define LIGHT_SHOW_DELAY3_MS 100
+#define CELEBRATE_TIMES 4
+#define LIGHT_SHOW_DELAY1_MS 5
+#define LIGHT_SHOW_DELAY2_MS 10
+#define LIGHT_SHOW_DELAY3_MS 5
 #define RESET_LED_MS 100
 #define GOAL_THRESHOLD 400
 #define NO_DOUBLE_COUNTING 50
-#define END_GAME_WAIT 3000
+#define END_GAME_WAIT 20
 
 // GLOBAL VARIABLES
 int score1 = 0;
@@ -31,6 +34,8 @@ int f1val;	// ADC F1 value [LSBs]
 int counterS1 = 0;	// Variable used to set the LED #1 for the score displays
 int counterS2 = 0;	// Variable used to set the LED #1 for the score displays
 
+char rx_buffer; //computer interactions for debug
+
 // SUBROUTINES
 void init_LEDs(void);
 void init_buttons(void);
@@ -43,14 +48,21 @@ void set_ADC(void);			// Initialize F0 and F1 as ADC ports
 void update_ADC(void);		// Updates ADC values saved in f0val and f1val
 void LED_S1_update(void);	// Update P1's LED score
 void LED_S2_update(void);	// Update P2's LED score
+void debug(void);
 
 
 
 //_______________________________________ MAIN
 int main(void){
 
+	if (DEBUG){
+		m_usb_init(); // connect usb
+		while(!m_usb_isconnected()){};  //wait for connection
+	}
+
 	init_LEDs();
 	init_buttons();
+	LED_show();
 
 	while(1){	// Play foosball forever...
 
@@ -60,6 +72,7 @@ int main(void){
 			resetButton = check(DDRC,6);
 			update_ADC();
 			update_score();
+			if (DEBUG) debug();
 		}
 
 		// Evaluate who was the victor!
@@ -114,28 +127,36 @@ void LED_show(void){
 //_______________________________________ Player 1's dancing LEDS
 void player1_celebration(void){
 	// Do a fancy little light show for the audience
-	for(int i=0; i<NUM_LEDS; i++){
-		set(PORTB, i);
-		m_wait(LIGHT_SHOW_DELAY1_MS);	// m_wait takes in milliseconds
-	}
-	m_wait(LIGHT_SHOW_DELAY2_MS);
-	for(int i=0; i<NUM_LEDS; i++){
-		clear(PORTB, i);
-		m_wait(LIGHT_SHOW_DELAY3_MS);
+	int count = 0;
+	while(count < CELEBRATE_TIMES){
+		for(int i=0; i<NUM_LEDS; i++){
+			set(PORTB, i);
+			m_wait(LIGHT_SHOW_DELAY1_MS);	// m_wait takes in milliseconds
+		}
+		m_wait(LIGHT_SHOW_DELAY2_MS);
+		for(int i=0; i<NUM_LEDS; i++){
+			clear(PORTB, i);
+			m_wait(LIGHT_SHOW_DELAY3_MS);
+		}
+		count++;
 	}
 }
 
 //_______________________________________ Player 2's dancing LEDS
 void player2_celebration(void){
 	// Do a fancy little light show for the audience
-	for(int i=0; i<NUM_LEDS; i++){
-		set(PORTD, i);
-		m_wait(LIGHT_SHOW_DELAY1_MS);	// m_wait takes in milliseconds
-	}
-	m_wait(LIGHT_SHOW_DELAY2_MS);
-	for(int i=0; i<NUM_LEDS; i++){
-		clear(PORTD, i);
-		m_wait(LIGHT_SHOW_DELAY3_MS);
+	int count = 0;
+	while(count < CELEBRATE_TIMES){
+		for(int i=0; i<NUM_LEDS; i++){
+			set(PORTD, i);
+			m_wait(LIGHT_SHOW_DELAY1_MS);	// m_wait takes in milliseconds
+		}
+		m_wait(LIGHT_SHOW_DELAY2_MS);
+		for(int i=0; i<NUM_LEDS; i++){
+			clear(PORTD, i);
+			m_wait(LIGHT_SHOW_DELAY3_MS);
+		}
+		count++;
 	}
 }
 
@@ -296,4 +317,27 @@ void update_ADC(void){
 
 	f1val = ADC;		// Save the ADC value into f1val
 	set(ADCSRA, ADIF); 	// Set flag after conversion
+}
+
+void debug(void){
+	while(!m_usb_rx_available());  	//wait for an indication from the computer
+	rx_buffer = m_usb_rx_char();  	//grab the computer packet
+
+	m_usb_rx_flush();  				//clear buffer		
+
+	if(rx_buffer == 1) {  			//computer wants ir data
+
+		//write ir data as concatenated hex:  i.e. f0f1f4f5
+		m_usb_tx_hex(f0val);
+		m_usb_tx_char('\n');  //MATLAB serial command reads 1 line at a time
+
+	}
+	if (ADC > 512){
+		m_green(ON);
+		m_red(OFF);
+	}	
+	else{
+		m_red(ON);
+		m_green(OFF);
+	}
 }
