@@ -1,8 +1,8 @@
 /***************************************************************
 
-Foosballing 
+Foosballin'
 
-By: Nicholas McGill [nmcgill.com]
+By: Nick McGill [nmcgill.com]
 
 ***************************************************************/
 
